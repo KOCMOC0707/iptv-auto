@@ -27,7 +27,20 @@ jobs:
             exit 1
           fi
 
-          curl -L -f -sS \
+          if [[ "$IPTV_URL" == "?" ]]; then
+  DOWNLOAD_URL="${IPTV_URL}&t=$(date +%s)"
+else
+  DOWNLOAD_URL="${IPTV_URL}?t=$(date +%s)"
+fi
+
+curl -L -f -sS \
+  -H "Cache-Control: no-cache" \
+  -H "Pragma: no-cache" \
+  --connect-timeout 30 \
+  --max-time 180 \
+  -A "Mozilla/5.0" \
+  "$DOWNLOAD_URL" \
+  -o playlist.tmp
             --connect-timeout 30 \
             --max-time 180 \
             -A "Mozilla/5.0" \
