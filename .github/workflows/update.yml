@@ -11,35 +11,52 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download playlist
+      - name: Download IPTV playlist
         env:
           IPTV_URL: ${{ secrets.IPTV_URL }}
         run: |
-          set -eu
+          set -e
+
           if [ -z "$IPTV_URL" ]; then
-            echo "IPTV_URL secret is empty"
+            echo "ERROR: IPTV_URL is empty"
             exit 1
           fi
 
-          curl -L --fail --silent --show-error \
-            --connect-timeout 20 \
-            --max-time 120 \
+          curl -L -f -sS \
+            --connect-timeout 30 \
+            --max-time 180 \
             -A "Mozilla/5.0" \
-            "$IPTV_URL" -o playlist.m3u
+            "$IPTV_URL" \
+            -o playlist.tmp
 
-          test -s playlist.m3u
-          head -n 1 playlist.m3u | grep -q '#EXTM3U'
+          if [ ! -s playlist.tmp ]; then
+            echo "ERROR: Downloaded file is empty"
+            exit 1
+          fi
 
-      - name: Save changes
+          if ! grep -q "#EXTM3U" playlist.tmp; then
+            echo "ERROR: File is not a valid M3U playlist"
+            exit 1
+          fi
+
+          mv playlist.tmp playlist.m3u
+          echo "Playlist downloaded successfully"
+
+      - name: Commit updated playlist
         run: |
           git config user.name "IPTV Updater"
           git config user.email "actions@github.com"
+
           git add playlist.m3u
-          git diff --cached --quiet || (
-            git commit -m "Update IPTV playlist"
+
+          if git diff --cached --quiet; then
+            echo "Playlist has not changed"
+          else
+            git commit -m "Automatic IPTV update"
             git push
-          )
+          fi
