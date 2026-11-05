@@ -19,7 +19,18 @@ jobs:
         env:
           IPTV_URL: ${{ secrets.IPTV_URL }}
         run: |
-          curl -fLsS "$IPTV_URL" -o playlist.m3u
+          set -eu
+          if [ -z "$IPTV_URL" ]; then
+            echo "IPTV_URL secret is empty"
+            exit 1
+          fi
+
+          curl -L --fail --silent --show-error \
+            --connect-timeout 20 \
+            --max-time 120 \
+            -A "Mozilla/5.0" \
+            "$IPTV_URL" -o playlist.m3u
+
           test -s playlist.m3u
           head -n 1 playlist.m3u | grep -q '#EXTM3U'
 
